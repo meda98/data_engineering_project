@@ -1,0 +1,112 @@
+# This file is a recipe that tells Docker: 
+# Which containers do I need, how should they be configured, and how should they work together?
+
+# This file defines the container-based infrastructure for a Kafka-based
+# streaming data pipeline. Docker Compose is used to orchestrate the
+# required services in a reproducible and portable manner.
+#
+# The setup includes:
+# - Apache Kafka for stream ingestion and message distribution
+# - PostgreSQL for persistent storage of processed sensor data
+
+services:
+
+  # Apache Kafka service
+  kafka:
+    # Official Apache Kafka image
+    image: apache/kafka:4.1.1
+
+    # Fixed container name
+    container_name: kafka
+
+    # Expose Kafka's client port to allow connections from the host system
+    ports:
+      - "9092:9092"
+
+    environment:
+      # Configure listeners for host (localhost) and Docker network access
+      KAFKA_LISTENERS: CONTROLLER://localhost:9091,HOST://0.0.0.0:9092,DOCKER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: HOST://localhost:9092,DOCKER://kafka:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,DOCKER:PLAINTEXT,HOST:PLAINTEXT
+
+      # Settings required for KRaft mode (single-node)
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9091
+
+      # Listener used for broker-to-broker communication
+      KAFKA_INTER_BROKER_LISTENER_NAME: DOCKER
+
+      # Required for a single-node cluster
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  # PostgreSQL database service
+  postgres:
+    # Official PostgreSQL image
+    image: postgres:16
+
+    # Fixed container name
+    container_name: postgres
+
+    # Expose PostgreSQL port for external access (e.g., database clients)
+    ports:
+      - "5433:5432"
+
+    environment:
+      # Database name and credentials
+      - POSTGRES_USER=de_user
+      - POSTGRES_PASSWORD=de_pass
+      - POSTGRES_DB=sensordb
+
+    # Persist database data across container restarts
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  producer:
+    # Build the producer container from the local producer directory
+    build: ./producer
+
+    # Fixed container name
+    container_name: producer
+
+    # Ensure Kafka is started before the producer
+    depends_on:
+      - kafka
+
+    environment:
+      # Kafka connection settings
+      KAFKA_BOOTSTRAP: kafka:9093
+      KAFKA_TOPIC: sensor_readings
+
+      # Input data and streaming control
+      CSV_PATH: ./data/predictive_maintenance.csv
+      SLEEP_SECONDS: "2"
+
+  consumer:
+    # Build the consumer container from the local consumer directory
+    build: ./consumer
+
+    # Fixed container name
+    container_name: consumer
+
+    # Ensure Kafka and PostgreSQL are started before the consumer
+    depends_on:
+      - kafka
+      - postgres
+
+    environment:
+      # Kafka connection settings
+      KAFKA_BOOTSTRAP: kafka:9093
+      KAFKA_TOPIC: sensor_readings
+
+      # PostgreSQL connection settings
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: sensordb
+      PGUSER: de_user
+      PGPASSWORD: de_pass
+
+# Named volume for persistent storage
+volumes:
+  pgdata:
