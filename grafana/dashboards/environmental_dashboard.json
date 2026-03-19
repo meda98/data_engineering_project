@@ -1,0 +1,426 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      },
+      {
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "PCC52D03280B7034C"
+        },
+        "enable": true,
+        "filter": {
+          "exclude": false,
+          "ids": [
+            1
+          ]
+        },
+        "hide": false,
+        "iconColor": "red",
+        "name": "Alerts",
+        "target": {
+          "dataset": "sensordb",
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  alert_ts AS time,\n\n  CASE\n    WHEN device_id = '00:0f:00:70:91:0a' THEN 'City Center'\n    WHEN device_id = '1c:bf:ce:15:ec:4d' THEN 'Residential Area'\n    WHEN device_id = 'b8:27:eb:bf:9d:51' THEN 'Industrial Area'\n  END AS title,\n\n  previous_status || ' → ' || current_status AS text\n\nFROM environmental_alerts\nWHERE\n  (previous_status = 'NORMAL' AND current_status = 'WARNING')\n  OR\n  (previous_status = 'WARNING' AND current_status = 'CRITICAL')\nORDER BY alert_ts;",
+          "refId": "Anno",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 1,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "PCC52D03280B7034C"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "#EAB839",
+                "value": 0.015
+              },
+              {
+                "color": "red",
+                "value": 0.02
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "displayMode": "gradient",
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [],
+          "fields": "/^environmental_index_avg$/",
+          "values": true
+        },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "text": {},
+        "valueMode": "color"
+      },
+      "pluginVersion": "12.3.3",
+      "targets": [
+        {
+          "dataset": "sensordb",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GRAFANA-POSTGRESQL-DATASOURCE}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT DISTINCT ON (device_id)\n  CASE\n    WHEN device_id = '00:0f:00:70:91:0a' THEN 'Urban Park'\n    WHEN device_id = '1c:bf:ce:15:ec:4d' THEN 'Residential Area'\n    WHEN device_id = 'b8:27:eb:bf:9d:51' THEN 'Downtown Traffic Area'\n  END AS location,\n  environmental_index_avg\nFROM processed_environmental_readings\nORDER BY device_id, processed_ts DESC;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Current Environmental Index Overview",
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "PCC52D03280B7034C"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "footer": {
+              "reducers": []
+            },
+            "inspect": false,
+            "width": 80,
+            "wrapHeaderText": true
+          },
+          "fieldMinMax": false,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Location"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 186
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Time"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 195
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status Change"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 3,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Time"
+          }
+        ]
+      },
+      "pluginVersion": "12.3.3",
+      "targets": [
+        {
+          "dataset": "sensordb",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GRAFANA-POSTGRESQL-DATASOURCE}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  alert_ts AS \"Time\",\n\n  CASE\n    WHEN device_id = '00:0f:00:70:91:0a' THEN 'Urban Park'\n    WHEN device_id = '1c:bf:ce:15:ec:4d' THEN 'Residential Area'\n    WHEN device_id = 'b8:27:eb:bf:9d:51' THEN 'Downtown Traffic Area'\n  END AS \"Location\",\n\n  previous_status || ' → ' || current_status AS \"Status Change\",\n\n  environmental_index_avg AS \"Index\"\n\nFROM environmental_alerts\nORDER BY alert_ts DESC;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Environmental Alerts",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "PCC52D03280B7034C"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "axisSoftMax": 0.02,
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineStyle": {
+              "fill": "solid"
+            },
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "line+area"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "orange",
+                "value": 0.015
+              },
+              {
+                "color": "red",
+                "value": 0.02
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 7
+      },
+      "id": 1,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.3.3",
+      "targets": [
+        {
+          "dataset": "sensordb",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GRAFANA-POSTGRESQL-DATASOURCE}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  processed_ts AS \"time\",\n  MAX(CASE WHEN device_id = '00:0f:00:70:91:0a' THEN environmental_index_avg END) AS \"Urban Park\",\n  MAX(CASE WHEN device_id = '1c:bf:ce:15:ec:4d' THEN environmental_index_avg END) AS \"Residential Area\",\n  MAX(CASE WHEN device_id = 'b8:27:eb:bf:9d:51' THEN environmental_index_avg END) AS \"Downtown Traffic Area\"\nFROM processed_environmental_readings\nGROUP BY processed_ts\nORDER BY time;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Environmental Index Trend",
+      "type": "timeseries"
+    }
+  ],
+  "preload": false,
+  "schemaVersion": 42,
+  "tags": [],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Environment Monitoring",
+  "uid": "adw2hf9",
+  "version": 3
+}
