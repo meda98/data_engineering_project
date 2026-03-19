@@ -16,6 +16,9 @@ services:
     # Official Apache Kafka image
     image: apache/kafka:4.1.1
 
+    # Automatically restart the container if it crashes
+    restart: unless-stopped
+
     # Fixed container name
     container_name: kafka
 
@@ -46,6 +49,9 @@ services:
     # Official PostgreSQL image
     image: postgres:16
 
+    # Automatically restart the container if it crashes
+    restart: unless-stopped
+
     # Fixed container name
     container_name: postgres
 
@@ -63,29 +69,109 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
-  producer:
+
+  # Producer for device 00:0f:00:70:91:0a
+  producer_d1:
     # Build the producer container from the local producer directory
     build: ./producer
-
-    # Fixed container name
-    container_name: producer
-
+    
+    # Automatically restart the container if it crashes
+    restart: unless-stopped
+    
     # Ensure Kafka is started before the producer
+    depends_on:
+      - kafka
+    
+    environment:
+      # Kafka connection settings
+      KAFKA_BOOTSTRAP: kafka:9093
+      KAFKA_TOPIC: environmental_sensor_readings
+      
+      # Input data and streaming control
+      CSV_PATH: ./data/iot_telemetry_data.csv
+      SLEEP_SECONDS: "2"
+      
+      # Unique device identifier
+      DEVICE_ID: "00:0f:00:70:91:0a"
+
+  # Producer for device 1c:bf:ce:15:ec:4d
+  producer_d2:
+    build: ./producer
+    restart: unless-stopped
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_BOOTSTRAP: kafka:9093
+      KAFKA_TOPIC: environmental_sensor_readings
+      CSV_PATH: ./data/iot_telemetry_data.csv
+      SLEEP_SECONDS: "2"
+      DEVICE_ID: "1c:bf:ce:15:ec:4d"
+
+  # Producer for device b8:27:eb:bf:9d:51
+  producer_d3:
+    build: ./producer
+    restart: unless-stopped
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_BOOTSTRAP: kafka:9093
+      KAFKA_TOPIC: environmental_sensor_readings
+      CSV_PATH: ./data/iot_telemetry_data.csv
+      SLEEP_SECONDS: "2"
+      DEVICE_ID: "b8:27:eb:bf:9d:51"
+  
+
+  processor:
+    # Build the processor container from the local processor directory
+    build: ./processor
+
+    # Automatically restart the container if it crashes
+    restart: unless-stopped
+
+    # Ensure Kafka is started before the processor
     depends_on:
       - kafka
 
     environment:
       # Kafka connection settings
       KAFKA_BOOTSTRAP: kafka:9093
-      KAFKA_TOPIC: sensor_readings
 
-      # Input data and streaming control
-      CSV_PATH: ./data/predictive_maintenance.csv
-      SLEEP_SECONDS: "2"
+      # Disable Python output buffering for immediate log visibility
+      PYTHONUNBUFFERED: "1"
+
+      # Input topic containing raw environmental sensor readings
+      RAW_TOPIC: environmental_sensor_readings
+
+      # Output topic containing enriched sensor readings
+      PROCESSED_TOPIC: processed_environmental_readings
+
+      # Topic used for environmental index alerts
+      ALERTS_TOPIC: environmental_alerts
+
+      # Kafka consumer group identifier
+      GROUP_ID: environmental-processor-group
+
+      # Size of the moving average window used for the environmental index
+      WINDOW_SIZE: "3"
+
+      # Weights used to compute the composite environmental index
+      CO_WEIGHT: "0.4"
+      LPG_WEIGHT: "0.3"
+      SMOKE_WEIGHT: "0.3"
+
+      # Thresholds used to classify environmental index status
+      ENV_INDEX_WARN_ON: "0.015"
+      ENV_INDEX_WARN_OFF: "0.0145"
+      ENV_INDEX_CRIT_ON: "0.020"
+      ENV_INDEX_CRIT_OFF: "0.019"
+
 
   consumer:
     # Build the consumer container from the local consumer directory
     build: ./consumer
+
+    # Automatically restart the container if it crashes
+    restart: unless-stopped
 
     # Fixed container name
     container_name: consumer
@@ -98,7 +184,7 @@ services:
     environment:
       # Kafka connection settings
       KAFKA_BOOTSTRAP: kafka:9093
-      KAFKA_TOPIC: sensor_readings
+      KAFKA_TOPIC: processed_environmental_readings
 
       # PostgreSQL connection settings
       PGHOST: postgres
@@ -107,6 +193,62 @@ services:
       PGUSER: de_user
       PGPASSWORD: de_pass
 
+  # Alert consumer: store alerts in Postgres
+  alert_consumer:
+    # Build the alert consumer container from the local alert_consumer directory
+    build: ./alert_consumer
+
+    # Automatically restart the container if it crashes
+    restart: unless-stopped
+
+    # Ensure Kafka and PostgreSQL are started before the alert consumer
+    depends_on:
+      - kafka
+      - postgres
+
+    environment:
+      # Kafka connection settings
+      KAFKA_BOOTSTRAP: kafka:9093
+      KAFKA_TOPIC: environmental_alerts
+
+      # PostgreSQL connection settings
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: sensordb
+      PGUSER: de_user
+      PGPASSWORD: de_pass
+
+  # Grafana: visualization layer
+  grafana:
+    image: grafana/grafana:latest
+
+    # Automatically restart the container if it crashes
+    restart: unless-stopped
+
+    # Expose Grafana UI on localhost:3000
+    ports:
+      - "3000:3000"
+
+    # Ensure database is available before Grafana starts
+    depends_on:
+      - postgres
+
+    environment:
+      # Default login credentials
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+
+    volumes:
+      # Persist Grafana internal data
+      - grafana_data:/var/lib/grafana
+
+      # Provisioning configuration (datasources.yml + dashboards.yml)
+      - ./grafana/provisioning:/etc/grafana/provisioning
+
+      # Dashboard JSON files
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+
 # Named volume for persistent storage
 volumes:
   pgdata:
+  grafana_data:
