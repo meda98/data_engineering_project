@@ -5,18 +5,19 @@ import psycopg2
 from kafka import KafkaConsumer
 from kafka.errors import NoBrokersAvailable
 
-# Connection parameters are provided via environment variables
+# PostgreSQL connection configuration
 PGHOST = os.environ["PGHOST"]
 PGPORT = os.environ["PGPORT"]
 PGDATABASE = os.environ["PGDATABASE"]
 PGUSER = os.environ["PGUSER"]
 PGPASSWORD = os.environ["PGPASSWORD"]
 
+# Kafka connection configuration
 KAFKA_BOOTSTRAP = os.environ["KAFKA_BOOTSTRAP"]
 KAFKA_TOPIC = os.environ["KAFKA_TOPIC"]
 
+# Connect to PostgreSQL with retry logic
 def connect_db():
-    # Retry until PostgreSQL is reachable
     while True:
         try:
             conn = psycopg2.connect(
@@ -36,21 +37,27 @@ def connect_db():
 conn = connect_db()
 cur = conn.cursor()
 
-# Create a table for sensor readings
+# Create table for processed environmental readings
 cur.execute("""
-CREATE TABLE IF NOT EXISTS sensor_readings (
+CREATE TABLE IF NOT EXISTS processed_environmental_readings (
   id SERIAL PRIMARY KEY,
-  udi INT,
-  air_temperature_k DOUBLE PRECISION,
-  process_temperature_k DOUBLE PRECISION,
-  rotational_speed_rpm INT,
-  torque_nm DOUBLE PRECISION,
-  tool_wear_min INT
+  device_id TEXT,
+  event_ts TIMESTAMPTZ,
+  processed_ts TIMESTAMPTZ,
+  co DOUBLE PRECISION,
+  humidity DOUBLE PRECISION,
+  light BOOLEAN,
+  lpg DOUBLE PRECISION,
+  motion BOOLEAN,
+  smoke DOUBLE PRECISION,
+  temp DOUBLE PRECISION,
+  environmental_index DOUBLE PRECISION,
+  environmental_index_avg DOUBLE PRECISION,
+  status TEXT
 );
 """)
 
-# Create a Kafka consumer instance
-# Retry until Kafka is reachable
+# Initialize Kafka consumer with retry logic
 consumer = None
 while consumer is None:
     try:
@@ -60,36 +67,52 @@ while consumer is None:
             auto_offset_reset="earliest",
             enable_auto_commit=True,
             value_deserializer=lambda v: json.loads(v.decode("utf-8")),
-            group_id="sensor-consumer",
+            group_id="processed-consumer",
         )
     except NoBrokersAvailable:
         print("Kafka not ready. Retrying...")
         time.sleep(2)
 
-print("Consumer started.")
+print(f"Consumer started. Reading from topic: {KAFKA_TOPIC}")
 
-# Read messages from Kafka and insert them into the sensor readings table
+# Read processed events from Kafka and store them in PostgreSQL
 for msg in consumer:
     e = msg.value
+
     cur.execute(
         """
-        INSERT INTO sensor_readings (
-            udi,
-            air_temperature_k,
-            process_temperature_k,
-            rotational_speed_rpm,
-            torque_nm,
-            tool_wear_min
+        INSERT INTO processed_environmental_readings (
+            device_id,
+            event_ts,
+            processed_ts,
+            co,
+            humidity,
+            light,
+            lpg,
+            motion,
+            smoke,
+            temp,
+            environmental_index,
+            environmental_index_avg,
+            status
         )
-        VALUES (%s, %s, %s, %s, %s, %s)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """,
         (
-            e.get("udi"),
-            e.get("air_temperature_k"),
-            e.get("process_temperature_k"),
-            e.get("rotational_speed_rpm"),
-            e.get("torque_nm"),
-            e.get("tool_wear_min")
+            e["device_id"],
+            e["event_ts"],
+            e["processed_ts"],
+            e["co"],
+            e["humidity"],
+            e["light"],
+            e["lpg"],
+            e["motion"],
+            e["smoke"],
+            e["temp"],
+            e["environmental_index"],
+            e["environmental_index_avg"],
+            e["status"],
         )
     )
+
     print("Inserted:", e)
