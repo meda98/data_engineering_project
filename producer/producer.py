@@ -2,27 +2,35 @@ import csv
 import json
 import os
 import time
+from datetime import datetime, timezone
 from kafka import KafkaProducer
 from kafka.errors import NoBrokersAvailable
 
-# Kafka connection settings (read from environment or use defaults)
+# Kafka connection configuration
 KAFKA_BOOTSTRAP = os.environ.get("KAFKA_BOOTSTRAP", "kafka:9093")
-KAFKA_TOPIC = os.environ.get("KAFKA_TOPIC", "sensor_readings")
 
-# Input CSV file path and streaming delay
-CSV_PATH = os.environ.get("CSV_PATH", "./data/predictive_maintenance.csv")
+# Kafka topic used for raw environmental sensor readings
+KAFKA_TOPIC = os.environ.get("KAFKA_TOPIC", "environmental_sensor_readings")
+
+# Input dataset and streaming parameters
+CSV_PATH = os.environ.get("CSV_PATH", "./data/iot_telemetry_data.csv")
 SLEEP_SECONDS = float(os.environ.get("SLEEP_SECONDS", "2"))
 
-# Helper function to safely convert values to int
-def to_int(x):
-    return int(x) if x is not None and x != "" else None
+# Device identifier assigned to this producer instance
+DEVICE_ID = os.environ.get("DEVICE_ID")
 
-# Helper function to safely convert values to float
+# Convert numeric values from CSV to float
 def to_float(x):
-    return float(x) if x is not None and x != "" else None
+    return float(x)
 
-# Create a Kafka producer instance
-# Retry until Kafka broker is available
+# Convert string representation of boolean values
+def to_bool(x):
+    if x == "true":
+        return True
+    if x == "false":
+        return False
+
+# Initialize Kafka producer with retry logic
 producer = None
 while producer is None:
     try:
@@ -35,31 +43,41 @@ while producer is None:
         time.sleep(2)
 
 print(f"Streaming from CSV: {CSV_PATH}")
+print(f"Producer assigned to device: {DEVICE_ID}")
 
-# Continuously stream data from the CSV file
+# Continuous streaming loop
 while True:
-    # Open the CSV file on each loop to restart from the beginning
+
+    # Open dataset and create CSV reader
     with open(CSV_PATH, newline="", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
 
-        # Process each row as a separate event
+        # Iterate over all rows in the dataset
         for row in reader:
-            # Build the event payload with typed fields
+
+            # Skip rows belonging to other devices
+            if row.get("device") != DEVICE_ID:
+                continue
+
+            # Build event message from sensor readings
             event = {
-                "udi": to_int(row.get("UDI")),
-                "air_temperature_k": to_float(row.get("Air temperature [K]")),
-                "process_temperature_k": to_float(row.get("Process temperature [K]")),
-                "rotational_speed_rpm": to_int(row.get("Rotational speed [rpm]")),
-                "torque_nm": to_float(row.get("Torque [Nm]")),
-                "tool_wear_min": to_int(row.get("Tool wear [min]"))
+                "device_id": row.get("device"),
+                "event_ts": datetime.now(timezone.utc).isoformat(),
+                "co": to_float(row.get("co")),
+                "humidity": to_float(row.get("humidity")),
+                "light": to_bool(row.get("light")),
+                "lpg": to_float(row.get("lpg")),
+                "motion": to_bool(row.get("motion")),
+                "smoke": to_float(row.get("smoke")),
+                "temp": to_float(row.get("temp")),
             }
 
             # Send event to Kafka topic
             producer.send(KAFKA_TOPIC, event)
             producer.flush()
 
-            # Log progress
-            print("Sent UDI:", event["udi"])
+            # Log transmitted event
+            print(f"Sent device={event['device_id']} at {event['event_ts']}")
 
-            # Pause between messages
+            # Delay to simulate periodic sensor measurements
             time.sleep(SLEEP_SECONDS)
