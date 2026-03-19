@@ -242,11 +242,8 @@ services:
       # Persist Grafana internal data
       - grafana_data:/var/lib/grafana
 
-      # Provisioning configuration (datasources.yml + dashboards.yml)
+      # Provisioning configuration (datasources.yml)
       - ./grafana/provisioning:/etc/grafana/provisioning
-
-      # Dashboard JSON files
-      - ./grafana/dashboards:/var/lib/grafana/dashboards
 
 # Named volume for persistent storage
 volumes:
