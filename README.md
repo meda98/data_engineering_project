@@ -28,7 +28,7 @@ The pipeline consists of the following components:
 - **Producers**: Simulate IoT devices streaming sensor data from a dataset
 - **Kafka**: Handles real-time data streaming
 - **Processor**: Computes environmental index, detects status changes, and creates alerts
-- **Consumer and Alert Consumer**: Consumes processed data and alerts from Kafka and stores them in PostgreSQL
+- **Consumer and Alert Consumer**: Consume processed data and alerts from Kafka and store them in PostgreSQL
 - **PostgreSQL**: Stores processed data and alerts
 - **Grafana**: Visualizes data in a dashboard
 
