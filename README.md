@@ -34,7 +34,7 @@ The pipeline consists of the following components:
 
 Data flow:
 ```console
-Producer → Kafka → Processor → Kafka → Consumer → PostgreSQL → Grafana
+Producer → Kafka → Processor → Kafka → Consumer/Alert Consumer → PostgreSQL → Grafana
 ```
 
 ## Dataset
