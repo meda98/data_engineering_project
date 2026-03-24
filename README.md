@@ -1,6 +1,5 @@
 # Environmental Sensor Streaming Pipeline
-This project implements a real-time data processing system for environmental monitoring in a city.  
-IoT devices continuously send sensor data, which is processed using a streaming pipeline and visualized in Grafana.
+This project implements a real-time data processing pipeline for environmental sensor data. Measurements (e.g., CO, LPG, smoke, temperature, humidity) of three IoT devices placed in different locations with varying environmental conditions are streamed to Apache Kafka. The data is processed using a stream processor that computes a composite environmental index, determines a status, and creates an alert in the case of a status change, thereby making aware of abnormal conditions. Processed data and alerts are stored in PostgreSQL and visualized in Grafana through an interactive dashboard.
 
 The system enables:
 - Real-time monitoring of environmental conditions
@@ -109,21 +108,25 @@ Password: admin
 
 
 ### 5. Import dashboard
-- Go to **Dashboards → Import**
+- Click **+** (upper right-hand corner) **→ Import dashboard**
 - Upload:
 ```console
 grafana/dashboards/environmental_dashboard.json
 ```
-- Select the PostgreSQL datasource
+- Select a PostgreSQL data source:
+```console
+grafana-postgresql-datasource
+```
+- Click **Import**
 
 
 ## Dashboard Features
 
-The Grafana dashboard includes:
+The Grafana dashboard includes three panels:
 
-- **Environmental Index Status** (per location)
-- **Alert history** showing status changes
-- **Time-series visualization** of environmental index
+- **Current Environmental Index Overview** (per location)
+- **Environmental Alerts** (showing status changes)
+- **Environmental Index Trend** (time-series visualization)
 
 
 ## Environmental Index
@@ -156,6 +159,7 @@ project/
 ├── producer/
 ├── processor/
 ├── consumer/
+├── alert_consumer/
 ├── grafana/
 │ ├── dashboards/
 │ └── provisioning/
@@ -166,6 +170,15 @@ project/
 
 ## Notes
 
-- Data is streamed continuously to simulate real-time IoT devices
-- Grafana datasource is automatically provisioned
-- Dashboard must be imported manually
+- The PostgreSQL data source is configured automatically via Grafana provisioning.
+- Data is streamed continuously from the CSV file to simulate real-time IoT devices. As soon as the end of the file is reached, the producer starts reading from the top again.
+- Each device represents a different urban environment (park, residential, and traffic area).
+- Alerts are triggered when the environmental index crosses predefined thresholds:  
+  0.015 → WARNING  
+  0.020 → CRITICAL  
+
+- Hysteresis is applied to prevent rapid alert fluctuations near threshold values.  
+
+  Example:
+  1. Index ≥ 0.015 → WARNING alert is sent.
+  2. Status is only set back to NORMAL if index < 0.0145.
