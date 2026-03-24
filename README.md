@@ -88,6 +88,8 @@ This will start:
 - Kafka
 - Producers
 - Stream processor
+- Consumer
+- Alert consumer
 - PostgreSQL
 - Grafana
 
