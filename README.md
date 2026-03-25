@@ -172,7 +172,7 @@ project/
 
 - The PostgreSQL data source is configured automatically via Grafana provisioning.
 - Data is streamed continuously from the CSV file to simulate real-time IoT devices. As soon as the end of the file is reached, the producer starts reading from the top again.
-- Each device represents a different urban environment (park, residential, and traffic area).
+- Each device represents a different urban environment (urban park, residential area, and downtown traffic area).
 - Alerts are triggered when the environmental index crosses predefined thresholds:  
   0.015 → WARNING  
   0.020 → CRITICAL  
