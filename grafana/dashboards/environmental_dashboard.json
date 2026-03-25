@@ -76,7 +76,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  alert_ts AS time,\n\n  CASE\n    WHEN device_id = '00:0f:00:70:91:0a' THEN 'City Center'\n    WHEN device_id = '1c:bf:ce:15:ec:4d' THEN 'Residential Area'\n    WHEN device_id = 'b8:27:eb:bf:9d:51' THEN 'Industrial Area'\n  END AS title,\n\n  previous_status || ' → ' || current_status AS text\n\nFROM environmental_alerts\nWHERE\n  (previous_status = 'NORMAL' AND current_status = 'WARNING')\n  OR\n  (previous_status = 'WARNING' AND current_status = 'CRITICAL')\nORDER BY alert_ts;",
+          "rawSql": "SELECT\n  alert_ts AS time,\n\n  CASE\n    WHEN device_id = '00:0f:00:70:91:0a' THEN 'Urban Park'\n    WHEN device_id = '1c:bf:ce:15:ec:4d' THEN 'Residential Area'\n    WHEN device_id = 'b8:27:eb:bf:9d:51' THEN 'Downtown Traffic Area'\n  END AS title,\n\n  previous_status || ' → ' || current_status AS text\n\nFROM environmental_alerts\nWHERE\n  (previous_status = 'NORMAL' AND current_status = 'WARNING')\n  OR\n  (previous_status = 'WARNING' AND current_status = 'CRITICAL')\nORDER BY alert_ts;",
           "refId": "Anno",
           "sql": {
             "columns": [
